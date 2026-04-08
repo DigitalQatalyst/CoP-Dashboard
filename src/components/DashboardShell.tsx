@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, LayoutDashboard, List, GitBranch, BarChart2, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, LayoutDashboard, List, GitBranch, BarChart2, RefreshCw, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { CommandCentre } from "@/components/CommandCentre";
 import { PositionCatalog } from "@/components/PositionCatalog";
 import { PipelineBoard } from "@/components/PipelineBoard";
@@ -31,6 +32,7 @@ const tabs: {
 export function DashboardShell({ activeTab }: { activeTab: DashboardTab }) {
   const { data, isLoading, isRefreshing, errorType, refresh } = useCopData();
   const lastUpdated = data ? getLastUpdatedState(data.summary.lastUpdated) : null;
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   return (
     <DrillDownProvider>
@@ -61,7 +63,7 @@ export function DashboardShell({ activeTab }: { activeTab: DashboardTab }) {
               </div>
             </div>
 
-            <nav className="flex gap-2 overflow-x-auto pb-1">
+            <nav className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
 
@@ -84,45 +86,93 @@ export function DashboardShell({ activeTab }: { activeTab: DashboardTab }) {
           </div>
         </header>
 
-        {errorType ? (
-          <div className="px-6 pt-6">
-            <div className="flex items-center justify-between rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-4">
-              <div className="flex items-center gap-3 text-destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  {errorType === "NO_ACCESS"
-                    ? "You don't have access to the CoP file. Contact HR admin."
-                    : errorType === "SESSION_EXPIRED"
-                      ? "Session expired - please refresh."
-                      : "Could not reach the CoP file. Check your connection or OneDrive permissions."}
-                </span>
+        <div className="lg:flex lg:items-start">
+          <aside className={`hidden shrink-0 border-r border-border/70 bg-card/90 p-4 transition-all duration-200 lg:flex lg:flex-col lg:gap-4 lg:sticky lg:top-24 lg:self-start ${navCollapsed ? "lg:w-20" : "lg:w-72"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className={`flex items-center gap-3 ${navCollapsed ? "justify-center" : ""}`}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-foreground text-sm font-bold text-background">
+                  DQ
+                </div>
+                {!navCollapsed ? (
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Sections</p>
+                  </div>
+                ) : null}
               </div>
-              <button onClick={() => void refresh()} className="rounded-xl bg-card px-3 py-2 text-sm font-medium text-foreground">
-                Retry
+              <button
+                type="button"
+                onClick={() => setNavCollapsed((value) => !value)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                aria-label={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+              >
+                {navCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </button>
             </div>
+
+            <nav className="space-y-2">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+
+                return (
+                  <Link
+                    key={tab.key}
+                    href={tab.href}
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-colors ${
+                      activeTab === tab.key
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    } ${navCollapsed ? "justify-center" : ""}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {!navCollapsed ? tab.label : null}
+                  </Link>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <div className="flex-1 min-w-0 bg-background">
+            {errorType ? (
+              <div className="px-4 pt-6 sm:px-6 lg:px-8">
+                <div className="flex flex-col gap-4 rounded-2xl border border-destructive/20 bg-destructive/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 text-destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {errorType === "NO_ACCESS"
+                        ? "You don't have access to the CoP file. Contact HR admin."
+                        : errorType === "SESSION_EXPIRED"
+                          ? "Session expired - please refresh."
+                          : "Could not reach the CoP file. Check your connection or OneDrive permissions."}
+                    </span>
+                  </div>
+                  <button onClick={() => void refresh()} className="rounded-xl bg-card px-3 py-2 text-sm font-medium text-foreground">
+                    Retry
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {isRefreshing ? (
+              <div className="px-4 pt-4 text-right text-xs text-muted-foreground sm:px-6 lg:px-8">Refreshing...</div>
+            ) : null}
+
+            <main className="pb-10 px-4 sm:px-6 lg:px-8">
+              {isLoading || !data ? (
+                <DashboardSkeleton />
+              ) : activeTab === "command" ? (
+                <CommandCentre positions={data.positions} summary={data.summary} />
+              ) : activeTab === "positions" ? (
+                <PositionCatalog positions={data.positions} />
+              ) : activeTab === "pipeline" ? (
+                <PipelineBoard positions={data.positions} />
+              ) : activeTab === "gaps" ? (
+                <HeadcountPlanner positions={data.positions} summary={data.summary} />
+              ) : (
+                <ContractorPool />
+              )}
+            </main>
           </div>
-        ) : null}
-
-        {isRefreshing ? (
-          <div className="px-6 pt-4 text-right text-xs text-muted-foreground">Refreshing...</div>
-        ) : null}
-
-        <main className="pb-10">
-          {isLoading || !data ? (
-            <DashboardSkeleton />
-          ) : activeTab === "command" ? (
-            <CommandCentre positions={data.positions} summary={data.summary} />
-          ) : activeTab === "positions" ? (
-            <PositionCatalog positions={data.positions} />
-          ) : activeTab === "pipeline" ? (
-            <PipelineBoard positions={data.positions} />
-          ) : activeTab === "gaps" ? (
-            <HeadcountPlanner positions={data.positions} summary={data.summary} />
-          ) : (
-            <ContractorPool />
-          )}
-        </main>
+        </div>
 
         <DrillDownHost />
       </div>
