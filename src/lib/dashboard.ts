@@ -199,12 +199,13 @@ export function getConversions(positions: Position[]) {
   const convert = (from: number, to: number) => (from > 0 ? Math.round((to / from) * 100) : 0);
 
   const items = [
-    { label: "TG -> Trial", value: `${convert(funnel.tg, funnel.trial)}% conversion` },
-    { label: "Trial -> Contract", value: `${convert(funnel.trial, funnel.contract)}% conversion` },
-    { label: "Contract -> Onboard", value: `${convert(funnel.contract, funnel.onboard)}% conversion` },
+    { label: "TG -> Trial", value: `${convert(funnel.tg, funnel.trial)}% conversion`, anomaly: convert(funnel.tg, funnel.trial) > 100 },
+    { label: "Trial -> Contract", value: `${convert(funnel.trial, funnel.contract)}% conversion`, anomaly: convert(funnel.trial, funnel.contract) > 100 },
+    { label: "Contract -> Onboard", value: `${convert(funnel.contract, funnel.onboard)}% conversion`, anomaly: convert(funnel.contract, funnel.onboard) > 100 },
     {
       label: "End-to-end yield",
       value: `${funnel.tg > 0 ? ((funnel.onboard / funnel.tg) * 100).toFixed(1) : "0.0"}%`,
+      anomaly: false,
     },
   ];
 
@@ -242,10 +243,20 @@ export function getInitiativeBreakdown(contractors: Contractor[]) {
   ).sort((left, right) => right.count - left.count);
 }
 
-export function getLastUpdatedState(lastUpdated: string) {
-  const minutesAgo = Math.max(0, differenceInMinutes(new Date(), new Date(lastUpdated)));
-  return {
-    isStale: minutesAgo > 5,
-    label: minutesAgo < 1 ? "Last updated just now" : `Last updated ${minutesAgo} min ago`,
-  };
+export function getLastUpdatedState(lastUpdated: Date | string) {
+  const date = typeof lastUpdated === "string" ? new Date(lastUpdated) : lastUpdated;
+  const minutesAgo = Math.max(0, differenceInMinutes(new Date(), date));
+  const isStale = minutesAgo > 5;
+  let label: string;
+  if (minutesAgo < 1) {
+    label = "Updated just now";
+  } else if (minutesAgo === 1) {
+    label = "Updated 1 min ago";
+  } else if (minutesAgo < 60) {
+    label = `Updated ${minutesAgo} min ago`;
+  } else {
+    // Show actual time for older data
+    label = `Updated at ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  return { isStale, label };
 }

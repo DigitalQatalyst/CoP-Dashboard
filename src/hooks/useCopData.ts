@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import useSWR from "swr";
 import type { CoPData } from "@/types/cop";
 
@@ -15,18 +16,29 @@ const fetcher = async (url: string) => {
 
 export function useCopData() {
   const interval = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL) || 30000;
+  // G1: track when data was last successfully fetched
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+  const fetchedRef = useRef<Date | null>(null);
+
   const swr = useSWR<CoPData>("/api/cop", fetcher, {
     refreshInterval: interval,
     revalidateOnFocus: true,
     dedupingInterval: 10000,
+    onSuccess: () => {
+      const now = new Date();
+      fetchedRef.current = now;
+      setLastFetchedAt(now);
+    },
   });
 
   return {
     data: swr.data,
     isLoading: swr.isLoading,
+    // G2: isRefreshing is true during re-validation (polling or manual refresh)
     isRefreshing: swr.isValidating && !swr.isLoading,
     error: swr.error,
     refresh: swr.mutate,
+    lastFetchedAt,
     errorType: swr.error?.message as
       | "SESSION_EXPIRED"
       | "NO_ACCESS"

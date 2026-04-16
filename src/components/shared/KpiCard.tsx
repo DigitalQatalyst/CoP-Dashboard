@@ -23,7 +23,7 @@ export function KpiCard({
           : "text-foreground";
 
   return (
-    <div className="rounded-2xl border border-border bg-card px-4 py-4 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card px-4 py-4 shadow-sm min-h-[132px]">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
         {Icon ? <Icon className="h-4 w-4 text-muted-foreground/70" /> : null}

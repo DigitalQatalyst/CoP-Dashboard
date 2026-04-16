@@ -1,3 +1,4 @@
+import { GitBranch } from "lucide-react";
 import type { PipelineStages } from "@/types/cop";
 
 export function PipelineSpark({ pipeline }: { pipeline: PipelineStages }) {
@@ -9,7 +10,13 @@ export function PipelineSpark({ pipeline }: { pipeline: PipelineStages }) {
   ];
 
   if (pipeline.total === 0) {
-    return <p className="text-xs font-medium text-destructive">No pipeline</p>;
+    // F7: icon badge instead of repeated inline text
+    return (
+      <div className="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-600 w-fit">
+        <GitBranch className="h-3 w-3 shrink-0" />
+        No pipeline
+      </div>
+    );
   }
 
   return (

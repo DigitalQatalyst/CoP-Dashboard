@@ -10,8 +10,10 @@ export interface DrillDownState {
 
 interface DrillDownContextValue {
   state: DrillDownState;
+  previousState: DrillDownState | null;
   openDrillDown: (type: NonNullable<DrillDownState["type"]>, id: string) => void;
   closeDrillDown: () => void;
+  goBack: () => void;
 }
 
 const DrillDownContext = createContext<DrillDownContextValue | null>(null);
@@ -22,14 +24,27 @@ export function DrillDownProvider({ children }: { children: React.ReactNode }) {
     type: null,
     id: null,
   });
+  const [previousState, setPreviousState] = useState<DrillDownState | null>(null);
 
   const value = useMemo<DrillDownContextValue>(
     () => ({
       state,
-      openDrillDown: (type, id) => setState({ isOpen: true, type, id }),
-      closeDrillDown: () => setState({ isOpen: false, type: null, id: null }),
+      previousState,
+      openDrillDown: (type, id) => {
+        // Save the currently-open panel before navigating to the new one
+        setPreviousState(state.isOpen ? state : null);
+        setState({ isOpen: true, type, id });
+      },
+      closeDrillDown: () => {
+        setPreviousState(null);
+        setState({ isOpen: false, type: null, id: null });
+      },
+      goBack: () => {
+        setState(previousState ?? { isOpen: false, type: null, id: null });
+        setPreviousState(null);
+      },
     }),
-    [state]
+    [state, previousState]
   );
 
   return <DrillDownContext.Provider value={value}>{children}</DrillDownContext.Provider>;
